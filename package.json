@@ -1,0 +1,24 @@
+{
+    "name": "com.tecvoodoo.games",
+    "displayName": "TecVooDoo Games",
+    "version": "1.2.0",
+    "unity": "6000.3",
+    "unityRelease": "0f1",
+    "description": "Shared gameplay systems for TecVooDoo Unity projects. Includes targeting, pooling, ability frameworks, and other reusable game-logic patterns.",
+    "author": {
+        "name": "TecVooDoo LLC",
+        "email": "rune@tecvoodoo.com"
+    },
+    "dependencies": {
+        "com.tecvoodoo.utilities": "1.0.0"
+    },
+    "license": "SEE LICENSE IN LICENSE.md",
+    "keywords": [
+        "gameplay",
+        "targeting",
+        "pooling",
+        "abilities",
+        "state-machine"
+    ],
+    "type": "library"
+}
