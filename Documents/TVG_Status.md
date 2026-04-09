@@ -1,6 +1,6 @@
 # TecVooDoo Games - Status
 
-**Package:** `com.tecvoodoo.games` v1.2.0
+**Package:** `com.tecvoodoo.games` v1.3.0
 **Type:** UPM local package (shared library)
 **Source:** `E:\Unity\DefaultUnityPackages\com.tecvoodoo.games\`
 **Namespace:** `TecVooDoo.Games`
@@ -17,8 +17,13 @@
 |--------|-------|--------|
 | Simulation | SimpleBoids | Stable -- moved from TVU |
 | Pooling | BulletHoleSpawner | Stable |
-| StateMachine | CharacterStateMachine, Transition | New -- CRTP state machine from adammyhre |
-| Processing | ProcessorChain | New -- generic processor chains from adammyhre |
+| StateMachine | CharacterStateMachine, Transition | Stable -- CRTP state machine from adammyhre |
+| Processing | ProcessorChain | Stable -- generic processor chains from adammyhre |
+| Reactive | Observable\<T\> | New -- reactive property with ValueChanged event |
+| Functional | Either\<TLeft,TRight\>, Optional\<T\>, Preconditions | New -- monads + guard clauses |
+| Effects | IEffect\<T\>, DamageEffect, DamageOverTimeEffect | New -- effect/DOT system using TVU IntervalTimer |
+| Serialization | SerializableType, TypeFilterAttribute | New -- serialize System.Type in Inspector |
+| Collections | PriorityQueue\<TElement,TPriority\> | New -- generic priority queue |
 
 ---
 
@@ -34,6 +39,16 @@ Reviewed all 10 adammyhre gists. Added 2 modules:
 - AOETargeting.cs REJECTED for TVG -- too coupled to adammyhre's own UnityUtils + custom interfaces (TargetingStrategy, Ability, IDamageable). Uses LINQ. Would need full rewrite.
 - DataBindingHelper.cs, AllocCounter.cs flagged as TecVooDoo Utilities candidates (not game logic).
 Version bumped to 1.2.0.
+
+**Session 2 (2026-04-09) -- 6 new modules from adammyhre HIGH-priority gists:**
+Added 6 new modules from HIGH-priority adammyhre gist candidates:
+- **Reactive/Observable.cs** -- Reactive property with ValueChanged event, implicit conversion, equality-checked Set().
+- **Functional/Either.cs** -- Either\<TLeft,TRight\> (result monad) + Optional\<T\> (option monad). Match/Select/SelectMany, implicit operators.
+- **Functional/Preconditions.cs** -- Guard clauses: CheckNotNull\<T\> (handles Unity Object null via TVU OrNull()), CheckState with format strings.
+- **Effects/DamageOverTimeEffect.cs** -- IEffect\<T\> interface + IDamageable + DamageEffect (instant) + DamageOverTimeEffect (tick-based via TVU IntervalTimer).
+- **Serialization/SerializableType.cs** -- Serialize System.Type in Inspector. TypeFilterAttribute for dropdown filtering. TypeExtensions.InheritsOrImplements(). Editor drawer wrapped in #if UNITY_EDITOR.
+- **Collections/PriorityQueue.cs** -- Generic PriorityQueue\<TElement,TPriority\> backed by SortedList with per-priority Queue buckets. Enqueue/Dequeue/Peek/Clear.
+All adapted: var removed, namespace TecVooDoo.Games, headers with attribution. ObservableList not found in adammyhre gists (only Observable exists). Version bumped to 1.3.0.
 
 ---
 
@@ -56,13 +71,13 @@ Gameplay scripts identified as candidates but not yet integrated:
 | CharacterStateMachine.cs | adammyhre gist #7 | DONE -- integrated Runtime/StateMachine/ |
 | Processor.cs | adammyhre gist #6 | DONE -- integrated Runtime/Processing/ as ProcessorChain |
 | AOETargeting.cs | adammyhre gist #10 | REJECTED -- too coupled to adammyhre's framework |
-| **Observable.cs** | adammyhre gist #54 | HIGH -- reactive property. Fits vanilla SO arch. UI binding, stat tracking. |
-| **ObservableList.cs** | adammyhre gist #53 | HIGH -- reactive collection. Inventory, quest lists, companion trains. |
-| **DamageOverTimeEffect.cs** | adammyhre gist #11 | HIGH -- DOT/HOT/buff pattern. Beat-em-up, metroidvania, fishing. |
-| **PriorityQueue.cs** | adammyhre gist #46 | HIGH -- double-key priority queue. AI decisions, pathfinding, event scheduling. |
-| **SerializableType.cs** | adammyhre gist #51 | HIGH -- serialize System.Type in Inspector. Ability/effect/factory patterns. |
-| **Either.cs** | adammyhre gist #30 | HIGH -- Result/Optional monad. Clean error handling for gameplay systems. |
-| **Preconditions.cs** | adammyhre gist #55 | HIGH -- guard clause utilities. Defensive programming. |
+| Observable.cs | adammyhre gist #54 | DONE -- integrated Runtime/Reactive/ (Session 2) |
+| ObservableList.cs | adammyhre gist #53 | DROPPED -- gist does not exist in adammyhre's repos |
+| DamageOverTimeEffect.cs | adammyhre gist #11 | DONE -- integrated Runtime/Effects/ with IEffect\<T\>, IDamageable (Session 2) |
+| PriorityQueue.cs | adammyhre gist #46 | DONE -- integrated Runtime/Collections/ as generic variant (Session 2) |
+| SerializableType.cs | adammyhre gist #51 | DONE -- integrated Runtime/Serialization/ with editor drawer (Session 2) |
+| Either.cs | adammyhre gist #30 | DONE -- integrated Runtime/Functional/ with Optional\<T\> (Session 2) |
+| Preconditions.cs | adammyhre gist #55 | DONE -- integrated Runtime/Functional/ using TVU OrNull() (Session 2) |
 | **CullingManager.cs** | adammyhre gist #13 | HIGH -- CullingGroup API wrapper. Performance for 3D projects. |
 | **Signal.cs** | adammyhre gist #31 | HIGH -- event bus. Compare against existing GameEvent system first. |
 | Targeting.cs (Combinator) | adammyhre gist #14 | MEDIUM -- composable targeting foundation. More architectural than AOE. |
