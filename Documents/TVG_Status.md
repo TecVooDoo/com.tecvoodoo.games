@@ -27,6 +27,30 @@
 
 ---
 
+## Tests
+
+**70 tests, 70 passing** -- first suite, added 2026-08-02; run in TVD on Unity 6000.5.5f1 (0 failed, 0 skipped). Before this, TVG had **zero** coverage: `TecVooDoo.Games.Tests.asmdef` existed and was correctly configured, but the folder held 0 `.cs` files, so Unity logged *"will not be compiled, because it has no scripts associated with it"* and the assembly never appeared in `CompilationPipeline` at all.
+
+| Fixture | Tests | Covers |
+|---------|-------|--------|
+| `EitherTests` + `OptionalTests` | 26 | Left/Right access + wrong-side throws, `Match`, `Select` mapping Right while passing Left through, `SelectMany` short-circuit (binder must not run on the empty side), Optional equality / bool conversion / `ToString` |
+| `ObservableTests` | 13 | Initial value, the equality short-circuit (setting an equal value must NOT fire), add/remove listener, multiple listeners, `Invoke` without mutation, implicit conversion, `Dispose` clearing listeners AND value |
+| `PriorityQueueTests` | 12 | Priority ordering, FIFO within a priority, count tracking, empty-queue throws, `Clear`, re-enqueue after clear, negative/zero priorities, and the drain-then-advance path where an emptied priority level is removed from the `SortedList` |
+| `PreconditionsTests` | 11 | `CheckNotNull` / `CheckState` incl. message + template overloads, and the destroyed-`UnityEngine.Object` case that is the whole reason `CheckNotNull` special-cases Unity objects |
+| `ProcessorChainTests` | 8 | `CombinedProcessor` ordering, chaining across type changes, 3-stage chains, `Compile` equivalence, and that building/compiling a chain does not execute it |
+
+**Not yet covered:** `SimpleBoids` and `BulletHoleSpawner` (the only two MonoBehaviours), `CharacterStateMachine` / `Transition`, `DamageEffect` / `DamageOverTimeEffect` (needs a TVU `IntervalTimer` harness), and `SerializableType`.
+
+**Running them -- three gates that each look like "no tests exist":**
+
+1. **The consuming project must list `com.tecvoodoo.games` in `Packages/manifest.json` `"testables"`.** Without it UPM never compiles the test assembly. TVD gained this entry 2026-08-02.
+2. **After editing `testables`, force a package resolve** -- `UnityEditor.PackageManager.Client.Resolve()`. An `assets-refresh` alone leaves the assembly absent from `CompilationPipeline.GetAssemblies()`.
+3. **They run in PlayMode, not EditMode** -- the asmdef uses `includePlatforms: []` rather than `["Editor"]`, so an EditMode run reports "No tests found" even once the assembly compiles.
+
+**Gotcha -- the MCP `tests-run` call can time out while the run itself succeeds.** A PlayMode run crosses the play-mode domain reload, and on the first run of a new assembly it also builds the InitTestScene, which can exceed the MCP client's idle timeout. The tool then reports a timeout even though Unity finished fine. **The authoritative result is `TestResults.xml`** at `%USERPROFILE%\AppData\LocalLow\<Company>\<Product>\TestResults.xml` (here: `.../LocalLow/DefaultCompany/TecVooDoo/TestResults.xml`) -- its root node carries `total` / `passed` / `failed` / `skipped`. Read that before concluding a run failed.
+
+---
+
 ## Sessions
 
 **Session 0 (2026-03-16) -- Scaffold + First Migration + BulletHoleSpawner:**
