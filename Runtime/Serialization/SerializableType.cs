@@ -117,10 +117,15 @@ namespace TecVooDoo.Games.Editor
 
             typeFilter = (TypeFilterAttribute)Attribute.GetCustomAttribute(fieldInfo, typeof(TypeFilterAttribute));
 
-            System.Reflection.Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            // AppDomain.GetAssemblies() can return already-unloaded assemblies (UAC0005)
+#if UNITY_6000_4_OR_NEWER
+            System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly> assemblies = UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies();
+#else
+            System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly> assemblies = AppDomain.CurrentDomain.GetAssemblies();
+#endif
             System.Collections.Generic.List<Type> filteredTypes = new System.Collections.Generic.List<Type>();
 
-            for (int i = 0; i < assemblies.Length; i++)
+            for (int i = 0; i < assemblies.Count; i++)
             {
                 Type[] types = assemblies[i].GetTypes();
                 for (int j = 0; j < types.Length; j++)
