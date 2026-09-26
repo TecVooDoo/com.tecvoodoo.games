@@ -29,7 +29,7 @@
 
 ## Tests
 
-**81 tests** -- 70 from the first suite (2026-08-02, 70/70 on Unity 6000.5.5f1) + **11 `SimpleBoidsTests` added 2026-09-26 (TVD S49), 11/11 passing on 6000.6.2f1 / MCP 0.93.1** -- the package's first `[UnityTest]`s. The original 70 were NOT re-run in S49. Before this, TVG had **zero** coverage: `TecVooDoo.Games.Tests.asmdef` existed and was correctly configured, but the folder held 0 `.cs` files, so Unity logged *"will not be compiled, because it has no scripts associated with it"* and the assembly never appeared in `CompilationPipeline` at all.
+**91 tests, 91 passing** -- whole assembly run 2026-09-26 (TVD S49) on Unity 6000.6.2f1 / MCP 0.93.1, 0 failed / 0 skipped -- the first runtime verification of the original 70 (2026-08-02, 6000.5.5f1) on 6000.6. S49 added **`SimpleBoidsTests` (11, the package's first `[UnityTest]`s)** and **`CharacterStateMachineTests` (10)**. Before this, TVG had **zero** coverage: `TecVooDoo.Games.Tests.asmdef` existed and was correctly configured, but the folder held 0 `.cs` files, so Unity logged *"will not be compiled, because it has no scripts associated with it"* and the assembly never appeared in `CompilationPipeline` at all.
 
 | Fixture | Tests | Covers |
 |---------|-------|--------|
@@ -38,9 +38,10 @@
 | `PriorityQueueTests` | 12 | Priority ordering, FIFO within a priority, count tracking, empty-queue throws, `Clear`, re-enqueue after clear, negative/zero priorities, and the drain-then-advance path where an emptied priority level is removed from the `SortedList` |
 | `PreconditionsTests` | 11 | `CheckNotNull` / `CheckState` incl. message + template overloads, and the destroyed-`UnityEngine.Object` case that is the whole reason `CheckNotNull` special-cases Unity objects |
 | `ProcessorChainTests` | 8 | `CombinedProcessor` ordering, chaining across type changes, 3-stage chains, `Compile` equivalence, and that building/compiling a chain does not execute it |
+| `CharacterStateMachineTests` | 10 | No-state tick is a no-op, first `ChangeState` enters without exit, Exit-before-Enter ordering, tick passes `dt` through, **a frame that takes a transition ticks neither state**, conditions re-evaluated per frame, first registered matching transition wins, false conditions skipped, no match -> null, re-entering the same instance exits then re-enters |
 | `SimpleBoidsTests` | 11 | Spawn counts (boids + flock markers + danger probe), hidden flock markers without gizmos, spawn scale range / level pose / flock assignment, speed range 3-7, `ClampPitch` (clamp, negative-pitch unwrap, in-range passthrough -- via reflection), boids move under `LateUpdate` (`[UnityTest]`), the behaviour coroutine reassigns offsets (`[UnityTest]`), no-threat danger loop keeps 1x multipliers. Config is set by reflection on an inactive GameObject before `Awake` |
 
-**Not yet covered:** `BulletHoleSpawner` (the only other MonoBehaviour), `CharacterStateMachine` / `Transition`, `DamageEffect` / `DamageOverTimeEffect` (needs a TVU `IntervalTimer` harness), and `SerializableType`.
+**Not yet covered:** `BulletHoleSpawner` (the only other MonoBehaviour), `DamageEffect` / `DamageOverTimeEffect` (needs a TVU `IntervalTimer` harness), and `SerializableType`.
 
 **Running them -- three gates that each look like "no tests exist":**
 
@@ -86,6 +87,9 @@ All adapted: var removed, namespace TecVooDoo.Games, headers with attribution. O
 **TVD Session 49 (2026-09-26) -- `SimpleBoids` tests (11) + two latent defects found, NOT fixed:**
 - **Speed smoothing is dead code.** `UpdateBoidPositions` smooths `boidCurrentSpeeds[b]` toward `boidSpeeds[b]` every frame, but `Translate` multiplies by `boidSpeeds[b]` -- the smoothed value is never read, so every behaviour change snaps each boid's speed instantly. Fix = translate by `boidCurrentSpeeds[b]` (and seed it in `InitializeBoids`, where it is currently left at 0 -- boids would then ease in from rest). Visible behaviour change, so Rune's call.
 - **The danger probe can detect itself.** The probe is a `CreatePrimitive(Sphere)` whose `SphereCollider` stays enabled, is put on the controller's own layer, and `Physics.CheckSphere` is run at the probe's own position. If `dangerLayer` includes that layer the flock is permanently "in danger". With `showDebugGizmos` on, the flock markers' colliders (Default layer, active) can also trip it. Fix = destroy the primitives' colliders (or use plain `GameObject`s). Not covered by a test because a positive-threat test would pass for the wrong reason.
+
+
+**The state machine is DUPLICATED across TVU and TVG (found S49, NOT resolved -- Rune's call).** `CharacterStateMachine` / `CharacterState` / `CharacterState<TState>` / `Transition` / `Transition<TState>` exist in BOTH `com.tecvoodoo.utilities/Runtime/Patterns/` (namespace `TecVooDoo.Utilities`) and `com.tecvoodoo.games/Runtime/StateMachine/` (namespace `TecVooDoo.Games`). A normalized diff shows only comments, member names (`t`/`transition`, `target`/`targetState`) and expression-bodied vs block bodies -- **behaviour is identical**. Because TVG depends on TVU, any file with both `using TecVooDoo.Utilities;` and `using TecVooDoo.Games;` that names one of these types hits `CS0104` (ambiguous reference). No fleet `Assets/` tree references either copy today (whole-`E:\Unity` grep), so removal is cheap now. TVG's copy is the tested one (`CharacterStateMachineTests`, 10 tests).
 
 ---
 
