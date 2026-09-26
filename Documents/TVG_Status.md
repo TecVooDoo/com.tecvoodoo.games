@@ -77,6 +77,10 @@ All adapted: var removed, namespace TecVooDoo.Games, headers with attribution. O
 **TVD Session 48 (2026-09-24) -- UAC0005 fix in `SerializableTypeDrawer`:**
 `SerializableType.cs(120,55)` called `AppDomain.CurrentDomain.GetAssemblies()`, which Unity 6000.6's analyzer flags `UAC0005` (may return already-unloaded assemblies). Now `UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies()` under `#if UNITY_6000_4_OR_NEWER`, with the `AppDomain` call as fallback so the `6000.3` floor holds (the 6.4 cutoff is from a third-party source, unverified on an older editor). Editor-only `PropertyDrawer`, behaviour unchanged. Verified by `CleanBuildCache` rebuild on 6000.6.2f1 with a positive control (TVU `UAC0009` still fired, ours did not). Commit `609b889`. No version bump; tests not re-run (drawer is untested -- `SerializableType` remains on the coverage TODO).
 
+
+**TVD Session 49 (2026-09-26) -- empty `Editor` asmdef removed:**
+`Editor/TecVooDoo.Games.Editor.asmdef` held 0 `.cs` files and nothing referenced it, so Unity warned *"will not be compiled, because it has no scripts associated with it"* on every load. Removed with its folder (Rune's call). The only editor-only code, `SerializableTypeDrawer`, lives inside `Runtime/Serialization/SerializableType.cs` under `#if UNITY_EDITOR` -- if it is ever split out, recreate the asmdef then. Version not bumped.
+
 ---
 
 ## Active TODO
