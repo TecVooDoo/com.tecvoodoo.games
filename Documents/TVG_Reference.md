@@ -1,6 +1,6 @@
 # TecVooDoo Games - Reference
 
-**Package:** `com.tecvoodoo.games` v1.3.0
+**Package:** `com.tecvoodoo.games` v1.4.0
 **Namespace:** `TecVooDoo.Games`
 **Source:** `E:\Unity\DefaultUnityPackages\com.tecvoodoo.games\`
 **Depends on:** `com.tecvoodoo.utilities`
@@ -14,7 +14,6 @@
 |--------|-------------------|
 | `Simulation/` | SimpleBoids flocking simulation |
 | `Pooling/` | BulletHoleSpawner DecalProjector pooling |
-| `StateMachine/` | CRTP state machine with transitions |
 | `Processing/` | Generic processor chains (fluent builder) |
 | `Reactive/` | Observable\<T\> reactive property with change events |
 | `Functional/` | Either\<L,R\> result monad, Optional\<T\>, Preconditions guard clauses |
@@ -51,54 +50,6 @@ Key parameters:
 ### BulletHoleSpawner
 
 DecalProjector object pooling system. Manages a pool of URP DecalProjectors for bullet impacts or similar surface marks. Based on adammyhre gist.
-
----
-
-## StateMachine
-
-### CharacterStateMachine
-
-CRTP (Curiously Recurring Template Pattern) state machine. Based on adammyhre gist.
-
-**Key types:**
-
-| Type | Purpose |
-|------|---------|
-| `CharacterStateMachine` | Drives current state, evaluates transitions, calls `Tick()` |
-| `CharacterState<TState>` | Base for concrete states. Override `OnEnter()`, `OnExit()`, `OnTick(float dt)` |
-| `Transition<TState>` | Condition-based transition to a target state |
-
-**Usage:**
-
-```csharp
-// Define states
-public class IdleState : CharacterState<IdleState>
-{
-    protected override void OnEnter() { /* ... */ }
-    protected override void OnExit() { /* ... */ }
-    protected override void OnTick(float dt) { /* ... */ }
-}
-
-public class MoveState : CharacterState<MoveState>
-{
-    protected override void OnEnter() { /* ... */ }
-    protected override void OnExit() { /* ... */ }
-    protected override void OnTick(float dt) { /* ... */ }
-}
-
-// Wire up
-CharacterStateMachine sm = new CharacterStateMachine();
-IdleState idle = new IdleState();
-MoveState move = new MoveState();
-
-idle.SetTransition(new Transition<MoveState>(move, () => isMoving));
-move.SetTransition(new Transition<IdleState>(idle, () => !isMoving));
-
-sm.ChangeState(idle);
-
-// Each frame
-sm.Tick(Time.deltaTime);
-```
 
 ---
 
