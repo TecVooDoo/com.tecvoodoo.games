@@ -26,18 +26,20 @@ namespace TecVooDoo.Games
 
         void ISerializationCallbackReceiver.OnAfterDeserialize()
         {
-            if (!TryGetType(assemblyQualifiedName, out Type type))
+            // An unset field is a valid "no type" state, not an error.
+            if (string.IsNullOrEmpty(assemblyQualifiedName))
+            {
+                Type = null;
+                return;
+            }
+
+            Type type = System.Type.GetType(assemblyQualifiedName);
+            if (type == null)
             {
                 Debug.LogError($"Type {assemblyQualifiedName} not found");
                 return;
             }
             Type = type;
-        }
-
-        static bool TryGetType(string typeString, out Type type)
-        {
-            type = Type.GetType(typeString);
-            return type != null || !string.IsNullOrEmpty(typeString);
         }
 
         public static implicit operator Type(SerializableType sType) => sType.Type;

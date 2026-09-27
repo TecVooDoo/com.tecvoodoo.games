@@ -4,6 +4,7 @@
     "references": [
         "TecVooDoo.Games",
         "TecVooDoo.Utilities",
+        "Unity.RenderPipelines.Universal.Runtime",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

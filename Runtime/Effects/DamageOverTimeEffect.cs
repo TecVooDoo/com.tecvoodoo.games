@@ -85,7 +85,13 @@ namespace TecVooDoo.Games
 
         public void Cancel()
         {
-            timer?.Stop();
+            // Stopping a running timer raises OnTimerStop -> OnStop -> Cleanup, which
+            // completes the effect; cleaning up again here would complete it twice.
+            if (timer != null && timer.IsRunning)
+            {
+                timer.Stop();
+                return;
+            }
             Cleanup();
         }
 

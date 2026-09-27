@@ -1,6 +1,6 @@
 # TecVooDoo Games - Status
 
-**Package:** `com.tecvoodoo.games` v1.4.0
+**Package:** `com.tecvoodoo.games` v1.5.0
 **Type:** UPM local package (shared library)
 **Source:** `E:\Unity\DefaultUnityPackages\com.tecvoodoo.games\`
 **Namespace:** `TecVooDoo.Games`
@@ -16,7 +16,7 @@
 | Module | Files | Status |
 |--------|-------|--------|
 | Simulation | SimpleBoids | Stable -- moved from TVU |
-| Pooling | BulletHoleSpawner | Stable |
+| Pooling | BulletHoleSpawner | Stable -- input-agnostic since 1.5.0 (`TrySpawnFromRay` / `SpawnDecal`) |
 | Processing | ProcessorChain | Stable -- generic processor chains from adammyhre |
 | Reactive | Observable\<T\> | New -- reactive property with ValueChanged event |
 | Functional | Either\<TLeft,TRight\>, Optional\<T\>, Preconditions | New -- monads + guard clauses |
@@ -28,7 +28,7 @@
 
 ## Tests
 
-**81 tests, 81 passing** -- whole assembly run 2026-09-26 (TVD S49) on Unity 6000.6.2f1 / MCP 0.93.1, 0 failed / 0 skipped -- the first runtime verification of the original 70 (2026-08-02, 6000.5.5f1) on 6000.6. S49 added **`SimpleBoidsTests` (11, the package's first `[UnityTest]`s)**; the 10 `CharacterStateMachineTests` written the same session moved to TVU with the state machine (see below). Before this, TVG had **zero** coverage: `TecVooDoo.Games.Tests.asmdef` existed and was correctly configured, but the folder held 0 `.cs` files, so Unity logged *"will not be compiled, because it has no scripts associated with it"* and the assembly never appeared in `CompilationPipeline` at all.
+**98 tests, 98 passing** -- whole assembly run 2026-09-27 (TVD S50) on Unity 6000.6.2f1 / MCP 0.93.2, 0 failed / 0 skipped. S50 added `DamageEffectTests` (6), `SerializableTypeTests` (7), `BulletHoleSpawnerTests` (4) -- **every TVG runtime type now has coverage**. Previously: **81 passing** -- whole assembly run 2026-09-26 (TVD S49) on Unity 6000.6.2f1 / MCP 0.93.1, 0 failed / 0 skipped -- the first runtime verification of the original 70 (2026-08-02, 6000.5.5f1) on 6000.6. S49 added **`SimpleBoidsTests` (11, the package's first `[UnityTest]`s)**; the 10 `CharacterStateMachineTests` written the same session moved to TVU with the state machine (see below). Before this, TVG had **zero** coverage: `TecVooDoo.Games.Tests.asmdef` existed and was correctly configured, but the folder held 0 `.cs` files, so Unity logged *"will not be compiled, because it has no scripts associated with it"* and the assembly never appeared in `CompilationPipeline` at all.
 
 | Fixture | Tests | Covers |
 |---------|-------|--------|
@@ -37,9 +37,12 @@
 | `PriorityQueueTests` | 12 | Priority ordering, FIFO within a priority, count tracking, empty-queue throws, `Clear`, re-enqueue after clear, negative/zero priorities, and the drain-then-advance path where an emptied priority level is removed from the `SortedList` |
 | `PreconditionsTests` | 11 | `CheckNotNull` / `CheckState` incl. message + template overloads, and the destroyed-`UnityEngine.Object` case that is the whole reason `CheckNotNull` special-cases Unity objects |
 | `ProcessorChainTests` | 8 | `CombinedProcessor` ordering, chaining across type changes, 3-stage chains, `Compile` equivalence, and that building/compiling a chain does not execute it |
+| `SerializableTypeTests` | 7 | Implicit conversions both ways, `JsonUtility` round-trip through the serialization callbacks, unknown name logs + null, empty name silent + null, `InheritsOrImplements` (self / base / interface / open generics / negatives), `TypeFilterAttribute` excluding abstract / interface / generic |
+| `DamageEffectTests` | 6 | `DamageEffect` apply + cancel; DoT cancel-before-apply; DoT full run = 4 ticks over 1s @ 0.25s and completes once (`[UnityTest]`); cancel mid-run stops ticking and completes once. **Harness: the real TVU `TimerManager` PlayerLoop hook + `Time.captureDeltaTime = 0.125f`** (power of two, so tick thresholds are exact) -- no TVU change was needed |
+| `BulletHoleSpawnerTests` | 4 | Placement offset along the normal + projection direction + size; `TrySpawnFromRay` hit vs miss against a primitive cube; fade-then-release to the pool (`[UnityTest]`); a released projector is reused by the next spawn (`[UnityTest]`) |
 | `SimpleBoidsTests` | 11 | Spawn counts (boids + flock markers + danger probe), hidden flock markers without gizmos, spawn scale range / level pose / flock assignment, speed range 3-7, `ClampPitch` (clamp, negative-pitch unwrap, in-range passthrough -- via reflection), boids move under `LateUpdate` (`[UnityTest]`), the behaviour coroutine reassigns offsets (`[UnityTest]`), no-threat danger loop keeps 1x multipliers. Config is set by reflection on an inactive GameObject before `Awake` |
 
-**Not yet covered:** `BulletHoleSpawner` (the only other MonoBehaviour), `DamageEffect` / `DamageOverTimeEffect` (needs a TVU `IntervalTimer` harness), and `SerializableType`.
+**Not covered:** the editor-only `SerializableTypeDrawer` (IMGUI; would need an EditMode editor test asmdef, which TVG no longer has).
 
 **Running them -- three gates that each look like "no tests exist":**
 
@@ -85,6 +88,14 @@ All adapted: var removed, namespace TecVooDoo.Games, headers with attribution. O
 **TVD Session 49 (2026-09-26) -- `SimpleBoids` tests (11) + two latent defects found, NOT fixed:**
 - **Speed smoothing is dead code.** `UpdateBoidPositions` smooths `boidCurrentSpeeds[b]` toward `boidSpeeds[b]` every frame, but `Translate` multiplies by `boidSpeeds[b]` -- the smoothed value is never read, so every behaviour change snaps each boid's speed instantly. Fix = translate by `boidCurrentSpeeds[b]` (and seed it in `InitializeBoids`, where it is currently left at 0 -- boids would then ease in from rest). Visible behaviour change, so Rune's call.
 - **The danger probe can detect itself.** The probe is a `CreatePrimitive(Sphere)` whose `SphereCollider` stays enabled, is put on the controller's own layer, and `Physics.CheckSphere` is run at the probe's own position. If `dangerLayer` includes that layer the flock is permanently "in danger". With `showDebugGizmos` on, the flock markers' colliders (Default layer, active) can also trip it. Fix = destroy the primitives' colliders (or use plain `GameObject`s). Not covered by a test because a positive-threat test would pass for the wrong reason.
+
+
+**TVD Session 50 (2026-09-27) -- coverage completed; 3 defects found by the new tests and FIXED (Rune's call) -> 1.5.0:**
+- **`DamageOverTimeEffect.Cancel()` completed twice while running.** `timer.Stop()` raises `OnTimerStop` -> `OnStop` -> `Cleanup()` (which fires `OnCompleted`), then `Cancel` called `Cleanup()` again. Fix: a running timer is stopped and its stop path does the cleanup; `Cleanup()` runs directly only when no timer is running. Test: `DamageOverTime_CancelMidway_CompletesOnce` (was 2, now 1).
+- **`SerializableType` deserialization was inverted.** `TryGetType` returned `type != null || !IsNullOrEmpty(name)`, so an unknown name deserialized silently to null and an EMPTY (default) field logged `Type  not found` on every load. Fix: empty -> silent null; unresolvable -> logged error. `TryGetType` removed.
+- **`BulletHoleSpawner` threw every frame in Input-System-only projects** (`Update` polled legacy `Input.GetMouseButtonDown`; TVD runs `activeInputHandler: 1`). **Breaking:** `Update` and the `Camera.main` lookup are gone; `SpawnDecal(RaycastHit)` is now public, `TrySpawnFromRay(Ray, float)` added, pool built in `Awake` (was `Start`). Anyone relying on click-to-fire must now call it from their own input code.
+- **Found, NOT fixed:** re-`Apply()` on a running DoT leaks the first timer (both keep ticking). Documented in `TVG_Reference.md` § Effects.
+- Test asmdef gained a `Unity.RenderPipelines.Universal.Runtime` reference (for `DecalProjector`).
 
 
 **State-machine duplication RESOLVED 2026-09-26 (TVD S49) -- Rune kept TVU's copy.** `CharacterStateMachine` / `CharacterState` / `CharacterState<TState>` / `Transition` / `Transition<TState>` had existed, behaviour-identical, in both `com.tecvoodoo.utilities/Runtime/Patterns/` (`TecVooDoo.Utilities`) and `com.tecvoodoo.games/Runtime/StateMachine/` (`TecVooDoo.Games`); a file importing both namespaces hit `CS0104`. **TVG's copy was deleted (TVG 1.3.0 -> 1.4.0)**; its 10 `CharacterStateMachineTests` moved to TVU (namespace `TecVooDoo.Utilities.Tests`) and pass there unchanged, and the usage docs moved from `TVG_Reference.md` to `TVU_Reference.md` § Patterns. Zero fleet `Assets/` callers existed, so nothing downstream broke.

@@ -10,9 +10,10 @@ using UnityEngine.Rendering.Universal;
 namespace TecVooDoo.Games
 {
     /// <summary>
-    /// Spawns URP DecalProjector bullet holes at raycast hit points using an object pool.
+    /// Spawns URP DecalProjector bullet holes at hit points using an object pool.
     /// Decals fade out over time and are returned to the pool automatically.
-    /// Attach to any GameObject. Fires on left mouse click by default.
+    /// Input-agnostic: call <see cref="TrySpawnFromRay"/> or <see cref="SpawnDecal"/> from
+    /// your own weapon / input code.
     /// </summary>
     public class BulletHoleSpawner : MonoBehaviour
     {
@@ -29,11 +30,9 @@ namespace TecVooDoo.Games
         public float fadeDuration = 5f;
 
         IObjectPool<DecalProjector> decalPool;
-        Camera cam;
 
-        void Start()
+        void Awake()
         {
-            cam = Camera.main;
             decalPool = new ObjectPool<DecalProjector>(
                 createFunc: CreateDecal,
                 actionOnGet: dp => dp.gameObject.SetActive(true),
@@ -45,19 +44,23 @@ namespace TecVooDoo.Games
             );
         }
 
-        void Update()
+        /// <summary>
+        /// Sphere-casts along <paramref name="ray"/> against <see cref="decalLayers"/> and spawns
+        /// a decal at the hit. Returns false when nothing was hit.
+        /// </summary>
+        public bool TrySpawnFromRay(Ray ray, float maxDistance = Mathf.Infinity)
         {
-            if (Input.GetMouseButtonDown(0))
-            {
-                Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-                if (Physics.SphereCast(ray, decalSize.x * 0.3f, out RaycastHit hitInfo, Mathf.Infinity, decalLayers))
-                {
-                    SpawnDecal(hitInfo);
-                }
-            }
+            if (!Physics.SphereCast(ray, decalSize.x * 0.3f, out RaycastHit hitInfo, maxDistance, decalLayers))
+                return false;
+
+            SpawnDecal(hitInfo);
+            return true;
         }
 
-        void SpawnDecal(RaycastHit hit)
+        /// <summary>
+        /// Spawns a decal at <paramref name="hit"/>, projected into the surface along its normal.
+        /// </summary>
+        public void SpawnDecal(RaycastHit hit)
         {
             DecalProjector projector = decalPool.Get();
             projector.transform.position = hit.point + hit.normal * 0.01f;

@@ -1,10 +1,10 @@
 # TecVooDoo Games - Reference
 
-**Package:** `com.tecvoodoo.games` v1.4.0
+**Package:** `com.tecvoodoo.games` v1.5.0
 **Namespace:** `TecVooDoo.Games`
 **Source:** `E:\Unity\DefaultUnityPackages\com.tecvoodoo.games\`
 **Depends on:** `com.tecvoodoo.utilities`
-**Last Updated:** April 9, 2026
+**Last Updated:** 2026-09-27 (TVD S50 -- BulletHoleSpawner API, Effects + Serialization behaviour notes)
 
 ---
 
@@ -50,6 +50,25 @@ Key parameters:
 ### BulletHoleSpawner
 
 DecalProjector object pooling system. Manages a pool of URP DecalProjectors for bullet impacts or similar surface marks. Based on adammyhre gist.
+
+**Input-agnostic since 1.5.0** -- it no longer polls the mouse. The pre-1.5.0 `Update()` called legacy `Input.GetMouseButtonDown`, which throws every frame in Input-System-only projects. Call it from your own weapon / input code:
+
+```csharp
+using TecVooDoo.Games;
+
+// From a camera ray (sphere-cast against decalLayers)
+bool placed = bulletHoles.TrySpawnFromRay(cam.ScreenPointToRay(pointerPosition));
+
+// From a hit you already have (e.g. your weapon's own raycast)
+bulletHoles.SpawnDecal(hit);
+```
+
+| Member | Purpose |
+|---|---|
+| `TrySpawnFromRay(Ray, float maxDistance = Infinity)` | Sphere-cast (radius `decalSize.x * 0.3`) against `decalLayers`; spawns at the hit; returns false on a miss |
+| `SpawnDecal(RaycastHit)` | Places a pooled projector 0.01 off the surface along the normal, projecting into it, random roll; fades over `fadeDuration`, then returns to the pool |
+
+Pool is built in `Awake` (default 10, max 20), so it is usable immediately after `AddComponent`.
 
 ---
 
@@ -201,6 +220,10 @@ dot.Apply(target);   // ticks 5 times over 5 seconds
 dot.Cancel();        // early cancellation
 ```
 
+**Completion contract (verified by `DamageEffectTests`):** `OnCompleted` fires **exactly once** per run -- on natural expiry or on `Cancel()`, never both (fixed in 1.5.0; before that, cancelling a running DoT fired it twice). `Cancel()` before `Apply()` also completes once.
+
+**Known limitation:** calling `Apply()` again on a DoT that is still running does not stop the first timer -- both keep ticking the target. Use one `DamageOverTimeEffect` instance per active effect, or `Cancel()` first.
+
 **Key types:**
 
 | Type | Purpose |
@@ -232,6 +255,8 @@ public SerializableType effectType;
 Type t = effectType;                    // implicit conversion
 IEffect<IDamageable> effect = (IEffect<IDamageable>)Activator.CreateInstance(t);
 ```
+
+**Deserialization (fixed in 1.5.0):** an empty / unset field deserializes silently to `Type == null`; a name that no longer resolves (renamed or deleted type) logs `Type <name> not found` and leaves `Type` null. Before 1.5.0 these were inverted -- every unset field logged an error, and a stale name failed silently.
 
 ### TypeExtensions
 
