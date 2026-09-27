@@ -121,6 +121,63 @@ namespace TecVooDoo.Games.Tests
         }
 
         [UnityTest]
+        public IEnumerator DamageOverTime_ApplyWhileRunning_IsIgnored()
+        {
+            DamageOverTimeEffect effect = new DamageOverTimeEffect { duration = 1f, tickInterval = 0.25f, damagePerTick = 1 };
+            DamageRecorder first = new DamageRecorder();
+            DamageRecorder second = new DamageRecorder();
+            int completed = 0;
+            effect.OnCompleted += _ => completed++;
+
+            Time.captureDeltaTime = 0.125f;
+            try
+            {
+                effect.Apply(first);
+                yield return null;
+                effect.Apply(second);
+                for (int i = 0; i < 20 && completed == 0; i++)
+                    yield return null;
+                for (int i = 0; i < 5; i++)
+                    yield return null;
+            }
+            finally
+            {
+                Time.captureDeltaTime = 0f;
+            }
+
+            Assert.That(first.Hits, Is.EqualTo(4), "the original run is unaffected");
+            Assert.That(second.Hits, Is.EqualTo(0), "the second Apply was ignored");
+            Assert.That(completed, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator DamageOverTime_ApplyAfterCompletion_RunsAgain()
+        {
+            DamageOverTimeEffect effect = new DamageOverTimeEffect { duration = 0.5f, tickInterval = 0.25f, damagePerTick = 1 };
+            DamageRecorder target = new DamageRecorder();
+            int completed = 0;
+            effect.OnCompleted += _ => completed++;
+
+            Time.captureDeltaTime = 0.125f;
+            try
+            {
+                effect.Apply(target);
+                for (int i = 0; i < 20 && completed == 0; i++)
+                    yield return null;
+                effect.Apply(target);
+                for (int i = 0; i < 20 && completed == 1; i++)
+                    yield return null;
+            }
+            finally
+            {
+                Time.captureDeltaTime = 0f;
+            }
+
+            Assert.That(target.Hits, Is.EqualTo(4), "2 ticks per run");
+            Assert.That(completed, Is.EqualTo(2));
+        }
+
+        [UnityTest]
         public IEnumerator DamageOverTime_CancelMidway_CompletesOnce()
         {
             DamageOverTimeEffect effect = new DamageOverTimeEffect { duration = 1f, tickInterval = 0.25f, damagePerTick = 1 };

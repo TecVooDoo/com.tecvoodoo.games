@@ -31,7 +31,7 @@ namespace TecVooDoo.Games.Tests
 
         // SimpleBoids reads its serialized config in Awake, so the controller is built
         // inactive, configured through its private fields, then activated.
-        SimpleBoids CreateBoids(int flocks, int boids, bool danger = false, int dangerMask = 0)
+        SimpleBoids CreateBoids(int flocks, int boids, bool danger = false, int dangerMask = 0, bool gizmos = false)
         {
             GameObject prefab = new GameObject("BoidPrefab");
             prefab.SetActive(false);
@@ -48,6 +48,7 @@ namespace TecVooDoo.Games.Tests
             SetField(boidsComponent, "scaleRange", new Vector2(1.0f, 1.5f));
             SetField(boidsComponent, "enableDanger", danger);
             SetField(boidsComponent, "dangerLayer", (LayerMask)dangerMask);
+            SetField(boidsComponent, "showDebugGizmos", gizmos);
 
             root.SetActive(true);
             return boidsComponent;
@@ -209,6 +210,75 @@ namespace TecVooDoo.Games.Tests
                     changed++;
             }
             Assert.That(changed, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void Awake_SeedsCurrentSpeedsFromTargetSpeeds()
+        {
+            SimpleBoids boids = CreateBoids(1, 10);
+
+            float[] target = GetField<float[]>(boids, "boidSpeeds");
+            float[] current = GetField<float[]>(boids, "boidCurrentSpeeds");
+            for (int i = 0; i < target.Length; i++)
+                Assert.That(current[i], Is.EqualTo(target[i]), "boids must not ease in from rest");
+        }
+
+        // A behaviour change must ease each boid toward its new speed, not snap to it:
+        // the per-frame step uses the smoothed speed.
+        [UnityTest]
+        public IEnumerator SpeedChange_EasesInsteadOfSnapping()
+        {
+            SimpleBoids boids = CreateBoids(1, 1);
+            boids.StopAllCoroutines();
+            SetField(boids, "turnSpeed", 0f);
+            SetField(boids, "boidSpeed", 1f);
+
+            float[] target = GetField<float[]>(boids, "boidSpeeds");
+            float[] current = GetField<float[]>(boids, "boidCurrentSpeeds");
+            current[0] = 3f;
+            target[0] = 7f;
+
+            Transform boid = GetField<Transform[]>(boids, "boidTransforms")[0];
+            Time.captureDeltaTime = 0.125f;
+            try
+            {
+                yield return null;
+                Vector3 before = boid.position;
+                yield return null;
+                float step = (boid.position - before).magnitude;
+
+                Assert.That(step, Is.GreaterThan(0.125f * 3f), "moving faster than the old speed");
+                Assert.That(step, Is.LessThan(0.125f * 7f * 0.95f), "but not yet at the new speed");
+            }
+            finally
+            {
+                Time.captureDeltaTime = 0f;
+            }
+        }
+
+        // The probe (and, with gizmos on, the flock markers) sit on the controller's layer.
+        // With that layer in dangerLayer and nothing else around, the flock must stay calm.
+        [Test]
+        public void DangerLoop_DoesNotDetectItsOwnProbeOrMarkers()
+        {
+            SimpleBoids boids = CreateBoids(2, 3, danger: true, dangerMask: 1 << 0, gizmos: true);
+
+            Assert.That(boids.gameObject.layer, Is.EqualTo(0));
+            Assert.That(GetField<float>(boids, "activeDangerSpeed"), Is.EqualTo(1f));
+            Assert.That(GetField<float>(boids, "activeDangerTurn"), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void DangerLoop_RealThreat_AppliesDangerMultipliers()
+        {
+            GameObject threat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            spawned.Add(threat);
+            Physics.SyncTransforms();
+
+            SimpleBoids boids = CreateBoids(1, 3, danger: true, dangerMask: 1 << 0);
+
+            Assert.That(GetField<float>(boids, "activeDangerSpeed"), Is.EqualTo(1.5f));
+            Assert.That(GetField<float>(boids, "activeDangerTurn"), Is.EqualTo(0.5f));
         }
 
         [Test]

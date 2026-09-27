@@ -168,7 +168,7 @@ namespace TecVooDoo.Games
                         boidCurrentSpeeds[b], boidSpeeds[b], ref speedDampVelocities[b], 0.5f);
                 }
 
-                boidTransforms[b].Translate(forwardStep * boidSpeeds[b]);
+                boidTransforms[b].Translate(forwardStep * boidCurrentSpeeds[b]);
 
                 Vector3 targetDirection = flockTransforms[boidFlockAssignment[b]].position
                     + boidOffsets[b] + verticalWave - boidTransforms[b].position;
@@ -269,6 +269,8 @@ namespace TecVooDoo.Games
             for (int f = 0; f < flockCount; f++)
             {
                 GameObject flockMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                // Visual only: a live collider here could trip the danger check.
+                flockMarker.GetComponent<Collider>().enabled = false;
                 flockMarker.SetActive(showDebugGizmos);
                 flockTransforms[f] = flockMarker.transform;
                 flockTransforms[f].position = cachedTransform.position;
@@ -285,6 +287,10 @@ namespace TecVooDoo.Games
             if (enableDanger)
             {
                 GameObject dangerProbe = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                // The probe CheckSpheres at its own position on this layer, so its own collider
+                // would make the flock permanently in danger. Disabled, not destroyed:
+                // Destroy is deferred and the first check runs synchronously in Awake.
+                dangerProbe.GetComponent<Collider>().enabled = false;
                 MeshRenderer dangerRenderer = dangerProbe.GetComponent<MeshRenderer>();
                 dangerRenderer.enabled = showDebugGizmos;
                 dangerProbe.layer = gameObject.layer;
@@ -317,6 +323,7 @@ namespace TecVooDoo.Games
                 boidTransforms[b].localRotation = Quaternion.Euler(0f, Random.value * 360f, 0f);
                 boidFlockAssignment[b] = Random.Range(0, flockCount);
                 boidSpeeds[b] = Random.Range(3.0f, 7.0f);
+                boidCurrentSpeeds[b] = boidSpeeds[b];
             }
         }
 

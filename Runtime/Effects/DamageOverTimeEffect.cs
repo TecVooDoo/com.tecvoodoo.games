@@ -64,8 +64,14 @@ namespace TecVooDoo.Games
         IntervalTimer timer;
         IDamageable currentTarget;
 
+        /// <summary>
+        /// Starts the effect. Ignored while this instance is already running -- use one
+        /// instance per concurrent effect, or Cancel() first to restart.
+        /// </summary>
         public void Apply(IDamageable target)
         {
+            if (timer != null && timer.IsRunning) return;
+
             currentTarget = target;
             timer = new IntervalTimer(duration, tickInterval);
             timer.OnInterval += OnInterval;

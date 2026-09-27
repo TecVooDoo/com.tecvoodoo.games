@@ -1,6 +1,6 @@
 # TecVooDoo Games - Reference
 
-**Package:** `com.tecvoodoo.games` v1.5.0
+**Package:** `com.tecvoodoo.games` v1.5.1
 **Namespace:** `TecVooDoo.Games`
 **Source:** `E:\Unity\DefaultUnityPackages\com.tecvoodoo.games\`
 **Depends on:** `com.tecvoodoo.utilities`
@@ -42,6 +42,8 @@ Key parameters:
 | `enableDanger` | Whether boids flee objects on `dangerLayer` |
 | `dangerRadius` | Physics overlap radius for danger detection |
 | `scaleRange` | Random scale variation per boid (x=min, y=max) |
+
+**Behaviour notes (1.5.1):** speed changes EASE (0.5s `SmoothDamp` toward each new random speed) rather than snap; the danger probe and flock-marker spheres have their colliders DISABLED, so `dangerLayer` may safely include the controller's own layer.
 
 ---
 
@@ -222,7 +224,7 @@ dot.Cancel();        // early cancellation
 
 **Completion contract (verified by `DamageEffectTests`):** `OnCompleted` fires **exactly once** per run -- on natural expiry or on `Cancel()`, never both (fixed in 1.5.0; before that, cancelling a running DoT fired it twice). `Cancel()` before `Apply()` also completes once.
 
-**Known limitation:** calling `Apply()` again on a DoT that is still running does not stop the first timer -- both keep ticking the target. Use one `DamageOverTimeEffect` instance per active effect, or `Cancel()` first.
+**Re-apply while running is IGNORED (1.5.1):** a second `Apply()` on an instance that is still ticking does nothing -- the original run and target are unaffected. (Before 1.5.1 it leaked the first timer and both ticked.) To restart, `Cancel()` then `Apply()`; for concurrent effects, use one instance each. `Apply()` after completion runs again normally.
 
 **Key types:**
 
